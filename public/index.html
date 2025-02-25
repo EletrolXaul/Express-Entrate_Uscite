@@ -1,0 +1,143 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestione Entrate/Uscite</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Gestione Entrate/Uscite</h1>
+        
+        <!-- Form per filtrare per mese/anno -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <input type="month" id="monthFilter" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <button onclick="loadTransactions()" class="btn btn-primary">Filtra</button>
+            </div>
+        </div>
+
+        <!-- Form per aggiungere transazione -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Nuova Transazione</h5>
+                <form id="transactionForm">
+                    <div class="mb-3">
+                        <input type="text" id="description" class="form-control" placeholder="Descrizione" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="number" id="amount" class="form-control" placeholder="Importo (- per uscite)" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="date" id="date" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Salva</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Lista transazioni -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Transazioni</h5>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrizione</th>
+                            <th>Importo</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsList"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api/transactions';
+
+        // Carica transazioni
+        async function loadTransactions() {
+            const monthFilter = document.getElementById('monthFilter').value;
+            let url = API_URL;
+            
+            if (monthFilter) {
+                const [year, month] = monthFilter.split('-');
+                url += `?year=${year}&month=${month}`;
+            }
+
+            try {
+                const response = await fetch(url);
+                const transactions = await response.json();
+                displayTransactions(transactions);
+            } catch (error) {
+                console.error('Errore:', error);
+            }
+        }
+
+        // Mostra transazioni
+        function displayTransactions(transactions) {
+            const tbody = document.getElementById('transactionsList');
+            tbody.innerHTML = '';
+
+            transactions.forEach(t => {
+                const row = `
+                    <tr class="${t.amount > 0 ? 'table-success' : 'table-danger'}">
+                        <td>${new Date(t.date).toLocaleDateString()}</td>
+                        <td>${t.description}</td>
+                        <td>${t.amount.toFixed(2)} €</td>
+                        <td>
+                            <button onclick="deleteTransaction(${t.id})" class="btn btn-sm btn-danger">Elimina</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Aggiungi transazione
+        document.getElementById('transactionForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const transaction = {
+                description: document.getElementById('description').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                date: document.getElementById('date').value
+            };
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(transaction)
+                });
+                
+                // Reset form e ricarica lista
+                e.target.reset();
+                loadTransactions();
+            } catch (error) {
+                console.error('Errore:', error);
+            }
+        };
+
+        // Elimina transazione
+        async function deleteTransaction(id) {
+            if (!confirm('Sei sicuro di voler eliminare questa transazione?')) return;
+
+            try {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                loadTransactions();
+            } catch (error) {
+                console.error('Errore:', error);
+            }
+        }
+
+        // Carica transazioni all'avvio
+        document.addEventListener('DOMContentLoaded', loadTransactions);
+    </script>
+</body>
+</html>
