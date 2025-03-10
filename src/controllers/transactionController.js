@@ -34,13 +34,14 @@ export const getTransactions = async (req, res) => {
 
 // POST - Crea nuova transazione
 export const createTransaction = async (req, res) => {
-  const { description, amount, date } = req.body;
+  const { description, amount, date, type = 'altro' } = req.body;
   try {
     const transaction = await prisma.transaction.create({
       data: {
         description,
         amount: parseFloat(amount),
-        date: parseISO(date)
+        date: parseISO(date),
+        type: type || 'altro' // Usa 'altro' come valore predefinito se type è null o undefined
       }
     });
     res.status(201).json(transaction);
@@ -52,14 +53,15 @@ export const createTransaction = async (req, res) => {
 // PUT - Aggiorna transazione esistente
 export const updateTransaction = async (req, res) => {
   const { id } = req.params;
-  const { description, amount, date } = req.body;
+  const { description, amount, date, type = 'altro' } = req.body;
   try {
     const transaction = await prisma.transaction.update({
       where: { id: parseInt(id) },
       data: {
         description,
         amount: parseFloat(amount),
-        date: parseISO(date)
+        date: parseISO(date),
+        type: type || 'altro' // Usa 'altro' come valore predefinito se type è null o undefined
       }
     });
     res.json(transaction);
